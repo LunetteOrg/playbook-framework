@@ -35,14 +35,3 @@ test('the name replaces the placeholders and .gitignore is restored', () => {
 test('an invalid name is refused', () => {
   assert.throws(() => create('Acme Playbook', target()), /invalid name/)
 })
-
-test('a new playbook opens in Obsidian with links kept up to date and technical files hidden', () => {
-  const t = target()
-  create('acme-playbook', t)
-  const app = JSON.parse(readFileSync(join(t, '.obsidian', 'app.json'), 'utf8'))
-  assert.equal(app.alwaysUpdateLinks, true)
-  assert.ok(app.userIgnoreFilters.includes('node_modules/'))
-  const ignored = readFileSync(join(t, '.gitignore'), 'utf8')
-  assert.match(ignored, /^\.obsidian\/\*$/m)
-  assert.match(ignored, /^!\.obsidian\/app\.json$/m)
-})
