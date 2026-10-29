@@ -1,2 +1,5 @@
 node_modules/
 .DS_Store
+# Obsidian: the shared settings are kept, each person's workspace is not.
+.obsidian/*
+!.obsidian/app.json

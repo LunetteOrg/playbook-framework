@@ -1,0 +1,4 @@
+{
+  "alwaysUpdateLinks": true,
+  "userIgnoreFilters": ["node_modules/", "package.json", "pnpm-lock.yaml", "AGENTS.md", "CLAUDE.md"]
+}
