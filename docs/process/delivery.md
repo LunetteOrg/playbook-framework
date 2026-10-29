@@ -33,7 +33,7 @@ exists:
    `npm publish --access public` with version `0.0.0`. The placeholder only
    reserves the name and is never installed.
 2. On the package's page on npmjs.com, Settings → Trusted publishing:
-   repository `LunetteOrg/playbook`, workflow `release.yml`, with
+   repository `LunetteOrg/playbook-framework`, workflow `release.yml`, with
    **allow `npm publish`** ticked.
 3. Run the first release within two days: an unused trusted publisher
    configuration expires.

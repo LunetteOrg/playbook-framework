@@ -1,4 +1,4 @@
-# Working on the Lunette playbook
+# Working on the Lunette playbook framework
 
 This repository is the framework, not a company playbook. It holds the
 `playbook` command, the template every company playbook starts from, and the

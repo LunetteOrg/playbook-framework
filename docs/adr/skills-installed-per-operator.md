@@ -15,8 +15,8 @@ the playbook. Some projects need a skill off, or on, for that project only.
 ## Decision
 
 - **Each operator installs the shared skills once, at user level, in each
-  agent**: `claude plugin install playbook --marketplace LunetteOrg/playbook`
-  in Claude Code, `npx skills add LunetteOrg/playbook -g -a <agent>` in the
+  agent**: `claude plugin install playbook --marketplace LunetteOrg/playbook-framework`
+  in Claude Code, `npx skills add LunetteOrg/playbook-framework -g -a <agent>` in the
   others (`~/.agents/skills`, read by OpenCode and Codex).
 - **A playbook does not carry the shared skills** nor the agent settings that
   install them.

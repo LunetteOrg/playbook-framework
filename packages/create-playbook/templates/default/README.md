@@ -1,7 +1,7 @@
 # {{name}}
 
 The playbook of {{name}}: rules, processes, procedures, tools and skills as
-plain files, built on the [Lunette playbook](https://github.com/LunetteOrg/playbook).
+plain files, built on the [Lunette playbook](https://github.com/LunetteOrg/playbook-framework).
 
 ```sh
 pnpm install

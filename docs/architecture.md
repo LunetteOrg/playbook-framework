@@ -6,7 +6,7 @@ where, how agents reach it, and how the framework is installed in each app.
 
 ```mermaid
 flowchart LR
-  subgraph framework["Framework (LunetteOrg/playbook, public)"]
+  subgraph framework["Framework (LunetteOrg/playbook-framework, public)"]
     skills["Shared skills<br/>apply-design-system<br/>consult-playbook<br/>run-procedure"]
     check["@lntt/playbook<br/>playbook check"]
     create["@lntt/create-playbook<br/>the template"]
@@ -70,8 +70,8 @@ the method:
 flowchart TB
   start(["New operator"]) --> who["Write who you are and your preferences<br/>where the app keeps them"]
   who --> code{"Coding agent?"}
-  code -->|Claude Code| cc["claude plugin install playbook<br/>--marketplace LunetteOrg/playbook"]
-  code -->|Codex, OpenCode, others| npx["npx skills add LunetteOrg/playbook<br/>-g -a agent-name"]
+  code -->|Claude Code| cc["claude plugin install playbook<br/>--marketplace LunetteOrg/playbook-framework"]
+  code -->|Codex, OpenCode, others| npx["npx skills add LunetteOrg/playbook-framework<br/>-g -a agent-name"]
   code -->|no: chat app| chat["Skills uploaded as archives<br/>by the organization (#9)"]
   code -->|no: workspace tool| ws["Skills imported into the tool (#10)"]
   cc --> clone["Clone the company playbook"]
@@ -84,8 +84,8 @@ flowchart TB
 
 | App | Skills | Who the operator is | Method | Company data | State |
 |---|---|---|---|---|---|
-| **Claude Code** | `claude plugin install playbook --marketplace LunetteOrg/playbook`, at user level | User-level `CLAUDE.md` | A clone of the playbook | Connectors (MCP) | Works |
-| **Codex, OpenCode** | `npx skills add LunetteOrg/playbook -g -a <agent>` (`~/.agents/skills`) | User-level `AGENTS.md` | A clone of the playbook | Connectors (MCP) | Install verified; loading in a session not yet verified (#3) |
+| **Claude Code** | `claude plugin install playbook --marketplace LunetteOrg/playbook-framework`, at user level | User-level `CLAUDE.md` | A clone of the playbook | Connectors (MCP) | Works |
+| **Codex, OpenCode** | `npx skills add LunetteOrg/playbook-framework -g -a <agent>` (`~/.agents/skills`) | User-level `AGENTS.md` | A clone of the playbook | Connectors (MCP) | Install verified; loading in a session not yet verified (#3) |
 | **Claude Desktop, claude.ai** | Uploaded as archives through organization provisioning | Personal preferences; organization instructions generated from one source (#8) | The document server (#11) | The app's connectors | Planned (#9) |
 | **Notion AI** | Imported into its skills database (name and description only) | The personal memory page | The document server (#11) | Native | Planned (#10) |
 | **People who do not use git** | — | — | A synced folder or a hosted viewer | — | To compare (#12) |
