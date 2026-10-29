@@ -1,4 +1,4 @@
-# Lunette playbook
+# Lunette playbook framework
 
 A framework for a company playbook that agents can use: rules, processes,
 procedures, tools and skills as plain Markdown files with a YAML header, in a
@@ -28,8 +28,8 @@ pnpm playbook check
 The shared skills install once per operator, in each agent, not in the playbook:
 
 ```sh
-claude plugin install playbook --marketplace LunetteOrg/playbook   # Claude Code
-npx skills add LunetteOrg/playbook -g -a <agent>                    # any other agent, e.g. -a opencode
+claude plugin install playbook --marketplace LunetteOrg/playbook-framework   # Claude Code
+npx skills add LunetteOrg/playbook-framework -g -a <agent>                    # any other agent, e.g. -a opencode
 ```
 
 They read the company's values from `.playbook/config.yaml` and are never
