@@ -9,14 +9,19 @@
 # No entry links to a retired entry; a valid entry does not link to a
 # provisional one.
 
+# An entry is named by its file: rules/customer-data.md is customer-data, and
+# the name is unique across the playbook. Links are names or Obsidian wikilinks
+# ("[[customer-data]]"). A code inherited from a previous system goes in the
+# entry's `aliases`: a link through it resolves, with a warning.
+
 # Optional: entries that still live elsewhere, for example during a migration.
-# One "CODE<tab>status" per line. Links to them are warnings, not errors.
+# One "name<tab>status<tab>type" per line. Links to them are warnings, not
+# errors.
 # pending: migration/pending.tsv
 
 types:
   rule:
     folder: rules
-    prefix: RULE               # files RULE-<n>-<topic>.md, «code» in the header
     required: [applies]
     fields:
       applies: [everywhere, where-cited]
@@ -31,7 +36,6 @@ types:
 
   process:
     folder: processes
-    prefix: PROCESS
     required: [owner]
     status:
       field: status
@@ -44,7 +48,6 @@ types:
 
   procedure:
     folder: procedures
-    prefix: PROCEDURE
     required: [owner]
     status:
       field: status
@@ -57,7 +60,7 @@ types:
       skills: skill
 
   tool:
-    folder: tools              # files <tool-name>.md, linked by file name
+    folder: tools
     required: [name]
     status:
       field: status

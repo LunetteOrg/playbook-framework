@@ -60,7 +60,7 @@ the method:
 
 | Way | State | Notes |
 |---|---|---|
-| A remote document server (MCP) that serves entries by code, links and status | Planned, #11 | One source for every MCP client, the workspace tool's agents included; `consult-playbook` already treats it as a source |
+| A remote document server (MCP) that serves entries by name, links and status | Planned, #11 | One source for every MCP client, the workspace tool's agents included; `consult-playbook` already treats it as a source |
 | The workspace tool's own connector to the git host | Depends on the tool | Search over the repository; does not follow the header links |
 | A read-only export of the playbook into the workspace tool | Not planned | A second copy that can drift; the playbook stays the only place it is changed |
 

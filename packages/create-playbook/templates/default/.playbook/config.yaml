@@ -47,4 +47,4 @@ clients:
 # Settings of each shared skill.
 skills:
   apply-design-system:
-    rules: []   # codes of the rules content must meet before delivery (notes, formats, names)
+    rules: []   # wikilinks to the rules content must meet before delivery (notes, formats, names)

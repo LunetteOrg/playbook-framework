@@ -1,6 +1,6 @@
 ---
 name: run-procedure
-description: "Carries out a procedure of the company playbook, step by step, with the rules, tools and attachments it links. Use when asked to do a task the playbook describes (by its code, its title or what it achieves), or when a piece of work matches a procedure's trigger."
+description: "Carries out a procedure of the company playbook, step by step, with the rules, tools and attachments it links. Use when asked to do a task the playbook describes (by its name, an old code, its title or what it achieves), or when a piece of work matches a procedure's trigger."
 metadata:
   status: in-force
 ---
@@ -26,7 +26,9 @@ first step whose owner matters.
 
 ## 1. Find the procedure
 
-- Given a code, open the file whose name starts with it.
+- Given a name, open the file with that name; given an old code, the entry
+  that lists it in `aliases` (or, with prefixes in the schema, the file whose
+  name starts with it).
 - Given a task, look for the procedure whose title, purpose or trigger matches
   it. If more than one matches, or none does, say so and ask: never improvise
   a procedure the playbook does not have.
@@ -54,7 +56,7 @@ Read the header before the text.
   have access to a tool a step needs, stop at that step and say which one.
 - Every skill in `skills`, and the procedures in `procedures` the text sends
   you to.
-- The attachments in the folder named after the procedure's code, if there is
+- The attachments in the folder named after the procedure, if there is
   one (a script, a model, a template), and the playbook's
   `.playbook/config.yaml`.
 

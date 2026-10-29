@@ -425,3 +425,196 @@ describe('schema independence', () => {
     ])
   })
 })
+
+// Entries named by their file, linked with Obsidian's wikilinks: the schema
+// has no prefixes, and an inherited code lives in `aliases`.
+const NAMED = SCHEMA.replace(/\n {4}prefix: \w+/g, '')
+
+const named = (status = 'in-force', extra: Record<string, string> = {}, body = 'Text.') =>
+  entry({ status, area: 'operations', ...extra }, body)
+
+describe('names and wikilinks', () => {
+  test('entries named by file, linked with wikilinks in the header and the text', () => {
+    const r = playbook(
+      {
+        'rules/customer-data.md': named(),
+        'procedures/onboarding.md': named(
+          'in-force',
+          { rules: '["[[customer-data]]"]', tools: '["[[wiki]]"]' },
+          'Follow [[customer-data|the data rule]], section [[customer-data#Storage]].',
+        ),
+        'processes/sales.md': named('in-force', { procedures: '["[[onboarding]]"]' }),
+        'tools/wiki.md': tool('Wiki'),
+      },
+      NAMED,
+    )
+    assert.deepEqual(check(r), { errors: [], warnings: [] })
+  })
+
+  test('an unquoted wikilink in a header list is read as a link', () => {
+    const r = playbook(
+      {
+        'rules/customer-data.md': named(),
+        'procedures/onboarding.md': named('in-force', { rules: '[[customer-data]]' }),
+      },
+      NAMED,
+    )
+    assert.deepEqual(check(r).errors, [])
+  })
+
+  test('a wikilink to a missing entry is an error', () => {
+    const r = playbook(
+      { 'procedures/onboarding.md': named('in-force', { rules: '["[[customer-data]]"]' }) },
+      NAMED,
+    )
+    assert.deepEqual(check(r).errors, [
+      'procedures/onboarding.md: "rules" links customer-data, which does not exist',
+    ])
+  })
+
+  test('a name is unique across folders', () => {
+    const r = playbook({ 'rules/onboarding.md': named(), 'procedures/onboarding.md': named() }, NAMED)
+    assert.ok(
+      check(r).errors.includes(
+        'onboarding appears in more than one file: procedures/onboarding.md, rules/onboarding.md',
+      ),
+    )
+  })
+
+  test('a wikilink in the text must be declared in the header', () => {
+    const r = playbook(
+      {
+        'rules/customer-data.md': named(),
+        'procedures/onboarding.md': named('in-force', {}, 'Follow [[customer-data]].'),
+      },
+      NAMED,
+    )
+    assert.deepEqual(check(r).errors, [
+      'procedures/onboarding.md: mentions customer-data in the text but not among the header links',
+    ])
+  })
+
+  test('a wikilink in the text to a missing entry is an error', () => {
+    const r = playbook(
+      { 'procedures/onboarding.md': named('in-force', {}, 'Follow [[customer-data]].') },
+      NAMED,
+    )
+    assert.deepEqual(check(r).errors, [
+      'procedures/onboarding.md: mentions [[customer-data]] in the text, which does not exist',
+    ])
+  })
+
+  test('embeds, links to a heading of the same entry and links to other files are not entry links', () => {
+    const r = playbook(
+      {
+        'procedures/onboarding.md': named(
+          'in-force',
+          {},
+          'See [[#Steps]], ![[diagram.png]] and [[onboarding/model.docx]].',
+        ),
+        'procedures/onboarding/model.docx': 'x',
+      },
+      NAMED,
+    )
+    assert.deepEqual(check(r).errors, [])
+  })
+
+  test('an entry may link itself in its text', () => {
+    const r = playbook(
+      { 'rules/customer-data.md': named('in-force', {}, 'This is [[customer-data]].') },
+      NAMED,
+    )
+    assert.deepEqual(check(r).errors, [])
+  })
+
+  test('a link through an inherited code resolves, with a warning to use the name', () => {
+    const r = playbook(
+      {
+        'rules/customer-data.md': named('in-force', { aliases: '[RULE-12]' }),
+        'procedures/onboarding.md': named('in-force', { rules: '[RULE-12]' }),
+      },
+      NAMED,
+    )
+    assert.deepEqual(check(r), {
+      errors: [],
+      warnings: [
+        'procedures/onboarding.md: "rules" links RULE-12, an alias of customer-data: link [[customer-data]]',
+      ],
+    })
+  })
+
+  test('an alias mentioned in the text counts as a mention of its entry', () => {
+    const r = playbook(
+      {
+        'rules/customer-data.md': named('in-force', { aliases: '[RULE-12]' }),
+        'rules/retention.md': named('in-force', { aliases: '[RULE-13]' }),
+        'procedures/onboarding.md': named(
+          'in-force',
+          { rules: '["[[customer-data]]"]' },
+          'As RULE-12 and RULE-13 say.',
+        ),
+      },
+      NAMED,
+    )
+    assert.deepEqual(check(r).errors, [
+      'procedures/onboarding.md: mentions RULE-13 in the text but not among the header links',
+    ])
+  })
+
+  test('an alias cannot repeat a name or another alias', () => {
+    const r = playbook(
+      {
+        'rules/customer-data.md': named('in-force', { aliases: '[RULE-12, retention]' }),
+        'rules/retention.md': named(),
+        'rules/old-data.md': named('superseded', { aliases: '[RULE-12]' }),
+      },
+      NAMED,
+    )
+    const { errors } = check(r)
+    assert.ok(
+      errors.includes('RULE-12 appears in more than one file: rules/customer-data.md, rules/old-data.md'),
+    )
+    assert.ok(
+      errors.includes('retention appears in more than one file: rules/customer-data.md, rules/retention.md'),
+    )
+  })
+
+  test('the attachments of a named entry live in a folder with its name', () => {
+    const r = playbook(
+      {
+        'procedures/onboarding.md': named(),
+        'procedures/onboarding/model.md': '# Model\n',
+        'procedures/offboarding/model.md': '# Model\n',
+      },
+      NAMED,
+    )
+    assert.deepEqual(check(r).errors, [
+      'procedures/offboarding/: attachments of offboarding, which does not exist',
+    ])
+  })
+
+  test('a pending entry is listed by name with its type', () => {
+    const r = playbook(
+      {
+        'pending.tsv': 'customer-data\tin-force\trule\n',
+        'procedures/onboarding.md': named('in-force', { rules: '["[[customer-data]]"]' }),
+      },
+      `pending: pending.tsv\n${NAMED}`,
+    )
+    assert.deepEqual(check(r), { errors: [], warnings: ['customer-data is linked but still pending'] })
+  })
+
+  test('a wikilink in the configuration must exist', () => {
+    const r = playbook(
+      {
+        'rules/customer-data.md': named(),
+        '.playbook/config.yaml':
+          'skills:\n  apply-design-system:\n    rules: ["[[customer-data]]", "[[brand-voice]]"]\n',
+      },
+      NAMED,
+    )
+    assert.deepEqual(check(r).errors, [
+      '.playbook/config.yaml: mentions [[brand-voice]], which does not exist',
+    ])
+  })
+})
