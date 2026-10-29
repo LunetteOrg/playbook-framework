@@ -9,7 +9,7 @@ in [`schema.yaml`](schema.yaml); this file says how to change the content.
 - Only the company's own method. No data about clients or people: no names,
   addresses, figures or examples taken from real work.
 - Before adding an entry, look for one on the same subject and change that one.
-- A rule is written once, where it belongs. Elsewhere its code is cited, never
+- A rule is written once, where it belongs. Elsewhere it is linked, never
   copied.
 - People are named by role (the owner, administration, operations), also in
   the `owner` field.
@@ -22,23 +22,25 @@ in [`schema.yaml`](schema.yaml); this file says how to change the content.
 - An entry that no longer holds is superseded, says which entry replaces it,
   and is not deleted.
 
-## Codes and files
+## Names and files
 
-- Codes are stable: never renumbered, never reused.
-- One folder per entry type, one file per entry. From a code you get the file:
-  RULE-4 is `rules/RULE-4-*.md`. The topic in the file name is lowercase and
-  hyphenated, and does not change when the title does.
+- One folder per entry type, one file per entry. The file name is the entry's
+  name: lowercase, hyphenated, unique across the playbook, and it does not
+  change when the title does.
+- A code inherited from a previous system stays in the entry's `aliases` while
+  people and documents still cite it.
 - Files an entry needs to be carried out (a script, a model, a template) live
-  in a folder named after its code, next to it: `procedures/PROCEDURE-3/`.
+  in a folder named after it, next to it: `procedures/send-an-invoice/`.
 
 ## Headers and links
 
 - Every file starts with a YAML header. Field names and enumerated values
   follow `schema.yaml`.
 - Links between entries live in the header, one field per link (`rules`,
-  `procedures`, `tools`…). Each relation is written on one side only: a
+  `procedures`, `tools`…), as wikilinks: `rules: ["[[customer-data]]"]`. Each relation is written on one side only: a
   process lists its procedures; a procedure does not repeat its process.
-- The text mentions only codes declared in the header.
+- The text links with wikilinks (`[[customer-data]]`), and only to entries
+  declared in the header.
 - No entry links to a retired entry; an entry in force does not link to a
   provisional one.
 

@@ -5,9 +5,14 @@
 //      schema's list of pending entries, kept elsewhere for now);
 //   B. every link leads to something still valid: no entry links to a retired
 //      one, and a valid entry does not link to a provisional one;
-//   C. the text mentions only codes that the header declares as links;
+//   C. the text mentions only entries that the header declares as links;
 // plus the minimum those three need: well-formed headers, allowed values, file
 // names that match codes, unique identifiers.
+//
+// An entry is identified by its code when its type has a prefix, otherwise by
+// its file name. Links are names, codes or Obsidian wikilinks ([[name]],
+// [[name|text]], [[name#heading]]). A code inherited from a previous system
+// lives in the entry's `aliases`: a link through it resolves, with a warning.
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { parse as parseYaml } from 'yaml'
@@ -41,6 +46,8 @@ type Entry = {
 
 type Target = { id: string; kind: Kind; status: string; inRepository: boolean }
 
+type Index = { targets: Map<string, Target>; aliases: Map<string, string> }
+
 export function check(root: string): Result {
   const errors: string[] = []
   const warnings = new Set<string>()
@@ -51,10 +58,11 @@ export function check(root: string): Result {
   }
 
   const entries = schema.kinds.flatMap((kind) => readEntries(root, kind, errors))
-  const codePattern = codeRegex(schema.kinds)
-  const targets = indexTargets(root, schema, entries, errors)
+  const index = indexTargets(root, schema, entries, errors)
+  const { targets, aliases } = index
+  const codePattern = codeRegex(schema.kinds, [...aliases.keys()])
   checkAttachments(root, schema, targets, errors)
-  checkConfig(root, codePattern, targets, errors)
+  checkConfig(root, codePattern, index, errors)
 
   for (const e of entries) {
     const source = category(e.kind, statusOf(e))
@@ -62,13 +70,16 @@ export function check(root: string): Result {
 
     for (const [field, targetKindName] of Object.entries(e.kind.links ?? {})) {
       const targetKind = schema.kinds.find((k) => k.type === targetKindName)
-      for (const value of list(get(e.header, field))) {
-        declared.add(value)
-        const target = targets.get(value)
+      for (const value of list(get(e.header, field)).map(linkName)) {
+        const id = aliases.get(value) ?? value
+        declared.add(id)
+        const target = targets.get(id)
         if (!target) {
           errors.push(`${e.path}: "${field}" links ${value}, which does not exist`)
           continue
         }
+        if (id !== value)
+          warnings.add(`${e.path}: "${field}" links ${value}, an alias of ${id}: link [[${id}]]`)
         if (target.kind !== targetKind) {
           errors.push(
             `${e.path}: "${field}" links ${value}, which is a ${target.kind.type}, not a ${targetKindName}`,
@@ -90,9 +101,15 @@ export function check(root: string): Result {
 
     const linkFields = new Set(Object.keys(e.kind.links ?? {}))
     const text = [e.body, ...descriptiveValues(e.header, linkFields)].join('\n')
-    for (const code of new Set(text.match(codePattern) ?? [])) {
-      if (code !== e.id && !declared.has(code)) {
-        errors.push(`${e.path}: mentions ${code} in the text but not among the header links`)
+    const mentions = new Set(text.match(codePattern) ?? [])
+    for (const name of wikilinks(text)) {
+      if (targets.has(name) || aliases.has(name)) mentions.add(name)
+      else errors.push(`${e.path}: mentions [[${name}]] in the text, which does not exist`)
+    }
+    for (const mention of mentions) {
+      const id = aliases.get(mention) ?? mention
+      if (id !== e.id && !declared.has(id)) {
+        errors.push(`${e.path}: mentions ${mention} in the text but not among the header links`)
       }
     }
   }
@@ -172,42 +189,51 @@ function identify(
   return id
 }
 
-function indexTargets(root: string, schema: Schema, entries: Entry[], errors: string[]): Map<string, Target> {
+function indexTargets(root: string, schema: Schema, entries: Entry[], errors: string[]): Index {
   const targets = new Map<string, Target>()
+  const aliases = new Map<string, string>()
   const paths = new Map<string, string[]>()
 
   for (const e of entries) {
     paths.set(e.id, [...(paths.get(e.id) ?? []), e.path])
     targets.set(e.id, { id: e.id, kind: e.kind, status: statusOf(e), inRepository: true })
+    for (const alias of list(e.header.aliases)) {
+      paths.set(alias, [...(paths.get(alias) ?? []), e.path])
+      aliases.set(alias, e.id)
+    }
   }
   for (const [id, files] of paths) {
     if (files.length > 1) errors.push(`${id} appears in more than one file: ${files.sort().join(', ')}`)
   }
 
-  // Entries kept elsewhere for now, typically during a migration: code and
-  // status, one per line, tab-separated.
+  // Entries kept elsewhere for now, typically during a migration: code or
+  // name, status, and the type when it is not given by a prefix, one per line,
+  // tab-separated.
   if (schema.pending) {
     const file = join(root, schema.pending)
     if (existsSync(file)) {
       for (const line of readFileSync(file, 'utf8').split('\n')) {
         if (!line.trim() || line.startsWith('#')) continue
-        const [id, status] = line.split('\t').map((s) => s.trim())
-        const kind = schema.kinds.find((k) => k.prefix && id.startsWith(`${k.prefix}-`) && /-\d+$/.test(id))
+        const [id, status, type] = line.split('\t').map((s) => s.trim())
+        const kind = type
+          ? schema.kinds.find((k) => k.type === type)
+          : schema.kinds.find((k) => k.prefix && id.startsWith(`${k.prefix}-`) && /-\d+$/.test(id))
         if (kind && !targets.has(id)) targets.set(id, { id, kind, status, inRepository: false })
       }
     } else {
       errors.push(`${schema.pending}: listed as "pending" in schema.yaml but missing`)
     }
   }
-  return targets
+  return { targets, aliases }
 }
 
 // Files an entry needs (a script, a model, a template) live in a folder named
-// after its code, next to it: procedures/PROCEDURE-3/. They are not entries.
+// after its code or name, next to it: procedures/PROCEDURE-3/,
+// procedures/onboarding/. They are not entries.
 function checkAttachments(root: string, schema: Schema, targets: Map<string, Target>, errors: string[]) {
   for (const kind of schema.kinds) {
     const folder = join(root, kind.folder)
-    if (!kind.prefix || !existsSync(folder)) continue
+    if (kind.file || !existsSync(folder)) continue
     for (const d of readdirSync(folder, { withFileTypes: true })) {
       if (d.isDirectory() && !targets.get(d.name)?.inRepository) {
         errors.push(`${kind.folder}/${d.name}/: attachments of ${d.name}, which does not exist`)
@@ -217,12 +243,18 @@ function checkAttachments(root: string, schema: Schema, targets: Map<string, Tar
 }
 
 // The configuration the skills read may name entries (the rules a skill
-// applies): they must exist.
-function checkConfig(root: string, codePattern: RegExp, targets: Map<string, Target>, errors: string[]) {
+// applies), by code or wikilink: they must exist.
+function checkConfig(root: string, codePattern: RegExp, { targets, aliases }: Index, errors: string[]) {
   const file = '.playbook/config.yaml'
   if (!existsSync(join(root, file))) return
-  for (const code of new Set(readFileSync(join(root, file), 'utf8').match(codePattern) ?? [])) {
-    if (!targets.has(code)) errors.push(`${file}: mentions ${code}, which does not exist`)
+  const text = readFileSync(join(root, file), 'utf8')
+  for (const code of new Set(text.match(codePattern) ?? [])) {
+    if (!targets.has(code) && !aliases.has(code))
+      errors.push(`${file}: mentions ${code}, which does not exist`)
+  }
+  for (const name of wikilinks(text)) {
+    if (!targets.has(name) && !aliases.has(name))
+      errors.push(`${file}: mentions [[${name}]], which does not exist`)
   }
 }
 
@@ -292,7 +324,7 @@ function descriptiveValues(header: Record<string, unknown>, linkFields: Set<stri
   const values: string[] = []
   for (const [key, value] of Object.entries(header)) {
     const path = prefix ? `${prefix}.${key}` : key
-    if (linkFields.has(path) || path === 'code') continue
+    if (linkFields.has(path) || path === 'code' || path === 'aliases') continue
     if (value && typeof value === 'object' && !Array.isArray(value)) {
       values.push(...descriptiveValues(value as Record<string, unknown>, linkFields, path))
     } else if (value !== undefined && value !== null) {
@@ -302,9 +334,36 @@ function descriptiveValues(header: Record<string, unknown>, linkFields: Set<stri
   return values
 }
 
-function codeRegex(kinds: Kind[]): RegExp {
-  const prefixes = kinds.flatMap((k) => (k.prefix ? [k.prefix] : [])).sort((a, b) => b.length - a.length)
-  return prefixes.length === 0 ? /(?!)/g : new RegExp(`\\b(?:${prefixes.join('|')})-\\d+\\b`, 'g')
+// Codes of the types with a prefix, and the aliases entries declare.
+function codeRegex(kinds: Kind[], aliases: string[]): RegExp {
+  const prefixes = kinds.flatMap((k) => (k.prefix ? [`${k.prefix}-\\d+`] : []))
+  const escaped = aliases.map((a) => a.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+  const words = [...prefixes, ...escaped].sort((a, b) => b.length - a.length)
+  return words.length === 0 ? /(?!)/g : new RegExp(`\\b(?:${words.join('|')})\\b`, 'g')
+}
+
+// The entries a text links with wikilinks. Embeds (![[…]]), links to a heading
+// of the same entry ([[#…]]) and links to files that are not Markdown are not
+// entry links.
+function wikilinks(text: string): Set<string> {
+  const names = new Set<string>()
+  for (const [, embed, target] of text.matchAll(/(!?)\[\[([^\]]*)\]\]/g)) {
+    if (embed) continue
+    const name = linkName(target)
+    if (name && !/\.[a-z0-9]+$/i.test(name)) names.add(name)
+  }
+  return names
+}
+
+// A link written as a name, a code or a wikilink, reduced to the name:
+// [[rules/customer-data#Storage|the rule]] is customer-data.
+function linkName(link: string): string {
+  const inner = link
+    .replace(/^\[\[|\]\]$/g, '')
+    .split('|')[0]
+    .split('#')[0]
+    .trim()
+  return inner.replace(/\.md$/, '').split('/').pop() ?? ''
 }
 
 function get(header: Record<string, unknown>, path: string): unknown {
@@ -316,8 +375,10 @@ function get(header: Record<string, unknown>, path: string): unknown {
   return value
 }
 
+// A list of links. An unquoted wikilink in a YAML list, rules: [[name]], is read
+// as a nested list.
 function list(value: unknown): string[] {
-  if (Array.isArray(value)) return value.map(String)
+  if (Array.isArray(value)) return value.flat(Number.POSITIVE_INFINITY).map(String)
   if (typeof value === 'string')
     return value
       .split(',')
