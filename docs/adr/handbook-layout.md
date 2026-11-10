@@ -58,11 +58,15 @@ An agent's working files stay out of the handbook.
 
 **Visibility** is declared by each entry, as its status and owner are:
 `visibility: public | internal | restricted`, with a default per type in the
-schema. A rule in `operations/` says which roles see restricted entries. The
-check refuses a link from an entry to one less visible than itself. The
-handbook declares who sees what; the system that serves the files enforces
-it. With a git host, that means one repository per level, the public one
-generated from the public entries.
+schema. A rule in `operations/` says which roles see restricted entries. An
+entry may link entries less visible than itself: a public package cites the
+internal decision and the source it comes from. A copy for a wider audience
+keeps the text of such a link and drops the link. What must not happen is
+restricted content inside a more visible entry: an entry that mixes both, such
+as a supplier with its public name and its private terms, is split in two.
+The handbook declares who sees what; the system that serves the files
+enforces it. With a git host, that means one repository per level, the wider
+ones generated from the entries they may show.
 
 ## Consequences
 
@@ -85,3 +89,7 @@ not the handbook.
 - **Encrypting restricted files in the repository.** File names stay visible,
   diffs and agents read noise, and revoking a person means encrypting again
   while the old history stays readable with the old key.
+- **Refusing links to less visible entries.** On a real handbook most public
+  entries cite internal sources and decisions as their provenance; refusing
+  the link hides where a fact comes from without protecting anything, since
+  the risk is restricted content, not a reference.
