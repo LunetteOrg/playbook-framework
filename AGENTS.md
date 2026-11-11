@@ -1,5 +1,8 @@
 # Working on the Lunette playbook framework
 
+> **The project is paused.** Do not start new work, open pull requests or
+> resume open ones without the maintainer's go.
+
 This repository is the framework, not a company playbook. It holds the
 `playbook` command, the template every company playbook starts from, and the
 skills they share. The layout is in the [README](README.md); decisions are in
